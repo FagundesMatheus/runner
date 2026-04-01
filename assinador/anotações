@@ -1,0 +1,4 @@
+Pastas:
+- Controller -> responsável pela comunicação http
+- Model -> classes para representar os dados
+- Service -> Regras de negócio
