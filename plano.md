@@ -18,4 +18,5 @@
    - Identificar o simulador no computador
    - Criar a conexão com o simulador
 6. Desenvolver o simulador.jar
-7. Desenvolver os CLIs 
+7. Desenvolver os CLIs
+   - Desenvolver em Python
