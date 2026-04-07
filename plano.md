@@ -1,15 +1,15 @@
 # Plano de implementação
 
 1. Selecionar as necessidades para a criação de um CLI e quais tecnologias aplicar em sua criação.
-2. Identificar os padrões de entrada necessários para a criação da assinatura digital
+2. Identificar necessidades do simulador.jar
+   - O que é necessário em um instalador
+   - Como implementar em java
+   - Como realizar os testes
+3. Identificar os padrões de entrada necessários para a criação da assinatura digital
    - Entradas necessárias
    - Tipos de entrada
    - Etapas de validação necessárias
    - Saídas esperadas
-3. Identificar necessidades do simulador.jar
-   - O que é necessário em um instalador
-   - Como implementar em java
-   - Como realizar os testes
 4. Criar uma base em código para o simulador.jar
    - Identificar e criar classes/interfaces
    - Estruturas arquivos necessários
