@@ -12,7 +12,7 @@ public class SignService implements ISignService {
 }
 
 
-
+/*
  1. String originaria do Bundle (endereço do jason Bundle);
  2. String originaria do Provenance.target  (endereço do Provenance.target);
  3. String originaria do PKCS# 11 (endereço do PKCS# 11, podendo ser um token ou um smartcard);
