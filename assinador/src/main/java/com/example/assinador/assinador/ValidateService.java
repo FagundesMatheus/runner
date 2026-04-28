@@ -3,10 +3,13 @@ package com.example.assinador.assinador;
 import org.springframework.stereotype.Service;
 
 @Service("validate")
-public class validate implements IValidateService {
+public class ValidateService implements IValidateService {
 
     @Override
-    public String getNomeServico() {
+    public String validate(
+        String assinaturaPath;
+        String politicaAssinatura;
+    ) {
         return "validate";
     }
 }

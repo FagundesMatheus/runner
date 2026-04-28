@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api")
 public class AssinadorController {
@@ -29,8 +32,16 @@ public class AssinadorController {
         AssinadorResponse response = new AssinadorResponse(
                 "/api/sign",
                 "SignService",
-                signService.sign(),
-                request.dados()
+                signService.sign(
+                        request.bundleEndereco(),
+                        request.provenanceTargetEndereco(),
+                        request.pkcs11Endereco(),
+                        request.cadeiaCertificadosEndereco(),
+                        request.timestampUnixUtc(),
+                        request.fonteTemporal(),
+                        request.politicaAssinaturaUrl()
+                ),
+                buildDadosRecebidos(request)
         );
         return ResponseEntity.ok(response);
     }
@@ -41,8 +52,20 @@ public class AssinadorController {
                 "/api/validate",
                 "validate",
                 validateService.validate(),
-                request.dados()
+                buildDadosRecebidos(request)
         );
         return ResponseEntity.ok(response);
+    }
+
+    private Map<String, Object> buildDadosRecebidos(AssinadorRequest request) {
+        Map<String, Object> dados = new HashMap<>();
+        dados.put("bundleEndereco", request.bundleEndereco());
+        dados.put("provenanceTargetEndereco", request.provenanceTargetEndereco());
+        dados.put("pkcs11Endereco", request.pkcs11Endereco());
+        dados.put("cadeiaCertificadosEndereco", request.cadeiaCertificadosEndereco());
+        dados.put("timestampUnixUtc", request.timestampUnixUtc());
+        dados.put("fonteTemporal", request.fonteTemporal());
+        dados.put("politicaAssinaturaUrl", request.politicaAssinaturaUrl());
+        return dados;
     }
 }

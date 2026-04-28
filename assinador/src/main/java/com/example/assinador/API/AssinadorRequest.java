@@ -1,8 +1,11 @@
 package com.example.assinador.API;
 
-import java.util.Map;
-
 public record AssinadorRequest(
-        Map<String, Object> dados
+        String bundleEndereco,
+        String provenanceTargetEndereco,
+        String pkcs11Endereco,
+        String cadeiaCertificadosEndereco,
+        String fonteTemporal,
+        String politicaAssinaturaUrl
 ) {
 }
