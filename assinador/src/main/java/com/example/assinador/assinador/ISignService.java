@@ -1,13 +1,8 @@
 package com.example.assinador.assinador;
 
-public interface ISignService {
+import com.example.assinador.API.AssinadorRequest;
+import com.example.assinador.API.AssinadorResponse;
 
-    String sign(
-            String bundleEndereco,
-            String provenanceTargetEndereco,
-            String pkcs11Endereco,
-            String cadeiaCertificadosEndereco,
-            String fonteTemporal,
-            String politicaAssinaturaUrl
-    );
+public interface ISignService {
+    AssinadorResponse sign(AssinadorRequest request);
 }

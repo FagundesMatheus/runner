@@ -1,6 +1,8 @@
 package com.example.assinador.API;
 
-public record AssinadorResponse<T>(
-        T resultado
+public record AssinadorResponse(
+        String signature,
+        boolean valid,
+        String message
 ) {
 }
