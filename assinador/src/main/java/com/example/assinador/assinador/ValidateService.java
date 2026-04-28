@@ -7,8 +7,8 @@ public class ValidateService implements IValidateService {
 
     @Override
     public String validate(
-        String assinaturaPath;
-        String politicaAssinatura;
+            String assinaturaPath,
+            String politicaAssinatura
     ) {
         return "validate";
     }
