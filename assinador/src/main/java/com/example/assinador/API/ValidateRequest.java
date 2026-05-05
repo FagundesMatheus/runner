@@ -1,7 +1,8 @@
 package com.example.assinador.API;
 
 public record ValidateRequest(
-        String assinaturaPath,
+        String content,
+        String signature,
         String politicaAssinatura
 ) {
 }

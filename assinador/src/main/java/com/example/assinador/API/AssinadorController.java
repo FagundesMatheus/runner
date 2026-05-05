@@ -1,13 +1,14 @@
 package com.example.assinador.API;
 
-import com.example.assinador.assinador.ISignService;
-import com.example.assinador.assinador.IValidateService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.example.assinador.assinador.ISignService;
+import com.example.assinador.assinador.IValidateService;
 
 @RestController
 @RequestMapping("/api")
@@ -25,28 +26,17 @@ public class AssinadorController {
     }
 
     @PostMapping("/sign")
-    public ResponseEntity<AssinadorResponse<String>> sign(@RequestBody AssinadorRequest request) {
-        AssinadorResponse<String> response = new AssinadorResponse<>(
-                signService.sign(
-                        request.bundleEndereco(),
-                        request.provenanceTargetEndereco(),
-                        request.pkcs11Endereco(),
-                        request.cadeiaCertificadosEndereco(),
-                        request.fonteTemporal(),
-                        request.politicaAssinaturaUrl()
-                )
-        );
+    public ResponseEntity<AssinadorResponse> sign(@RequestBody AssinadorRequest request) {
+        AssinadorResponse response = signService.sign(request);
+        
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/validate")
-    public ResponseEntity<ValidateResponse<String>> validate(@RequestBody ValidateRequest request) {
-        ValidateResponse<String> response = new ValidateResponse<>(
-                validateService.validate(
-                        request.assinaturaPath(),
-                        request.politicaAssinatura()
-                )
-        );
+   @PostMapping("/validate")
+    public ResponseEntity<ValidateResponse> validate(@RequestBody ValidateRequest request) {
+        
+        ValidateResponse response = validateService.validate(request);
+        
         return ResponseEntity.ok(response);
     }
 }

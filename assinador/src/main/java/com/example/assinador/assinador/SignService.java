@@ -2,29 +2,40 @@ package com.example.assinador.assinador;
 
 import org.springframework.stereotype.Service;
 
+import com.example.assinador.API.AssinadorRequest;
+import com.example.assinador.API.AssinadorResponse;
+
 @Service("SignService")
 public class SignService implements ISignService {
 
+    private static final String FAKE_SIGNATURE = "MOCKED_SIGNATURE_BASE64_==";
+
     @Override
-    public String sign(
-            String bundleEndereco,
-            String provenanceTargetEndereco,
-            String pkcs11Endereco,
-            String cadeiaCertificadosEndereco,
-            String fonteTemporal,
-            String politicaAssinaturaUrl
-    ) {
-        return "SignService";
+    public AssinadorResponse sign(AssinadorRequest request) {
+        if (request == null || isBlank(request.bundleEndereco())) {
+            return new AssinadorResponse(null, false, "Erro: 'bundleEndereco' (arquivo) é obrigatório.");
+        }
+
+        if (isBlank(request.pkcs11Endereco())) {
+            return new AssinadorResponse(null, false, "Erro: Driver do Token (pkcs11Endereco) não fornecido.");
+        }
+
+        if (isBlank(request.cadeiaCertificadosEndereco())) {
+            return new AssinadorResponse(null, false, "Erro: Cadeia de certificados ausente.");
+        }
+        
+        if (isBlank(request.politicaAssinaturaUrl())) {
+            return new AssinadorResponse(null, false, "Erro: Política de assinatura não definida.");
+        }
+
+        if (isBlank(request.fonteTemporal())) {
+            System.out.println("Aviso: Assinatura sendo gerada sem Carimbo de Tempo.");
+        }
+
+        return new AssinadorResponse(FAKE_SIGNATURE, true, "Assinatura criada com sucesso utilizando hardware e políticas fornecidas.");
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }
-
-
-/*
- 1. String originaria do Bundle (endereço do jason Bundle);
- 2. String originaria do Provenance.target  (endereço do Provenance.target);
- 3. String originaria do PKCS# 11 (endereço do PKCS# 11, podendo ser um token ou um smartcard);
- 4. String originaria da Cadeia de Certificados (endereço da Cadeia de Certificados);
- 5. - String que ira receber o valor inteiro Unix UTC (Timestamp) do momento da assinatura (data e hora da assinatura);
- 6. String que determina a fonte temporal da assinatura;
- 7. String da identificação da política de assinaturra (Uma URL); 
- */

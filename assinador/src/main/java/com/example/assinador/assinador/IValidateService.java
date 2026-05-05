@@ -1,9 +1,8 @@
 package com.example.assinador.assinador;
 
-public interface IValidateService {
+import com.example.assinador.API.ValidateRequest;
+import com.example.assinador.API.ValidateResponse;
 
-    String validate(
-            String assinaturaPath,
-            String politicaAssinatura
-    );
+public interface IValidateService {
+    ValidateResponse validate(ValidateRequest request);
 }
