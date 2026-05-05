@@ -1,13 +1,9 @@
 name: Assinador release
 
 on:
-  pull_request:
-    branches:
-      - main
-    types:
-      - closed
-    paths:
-      - 'assinador/**'
+  push:
+    tags:
+      - 'assinador-v*'
 
 permissions:
   contents: write
@@ -15,7 +11,6 @@ permissions:
 
 jobs:
   build-and-release:
-    if: ${{ github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
 
     steps:
