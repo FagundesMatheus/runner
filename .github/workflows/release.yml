@@ -1,0 +1,54 @@
+name: Assinador release
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+    paths:
+      - 'assinador/**'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build-and-release:
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build da aplicação Java
+        run: |
+          mvn -f assinador/pom.xml clean package -DskipTests
+          mv assinador/target/*.jar aplicacao-java.jar
+
+      - name: Instalar o Cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Assinar o artefato com Cosign (Keyless/OIDC)
+        run: |
+          cosign sign-blob aplicacao-java.jar \
+            --yes \
+            --output-signature aplicacao-java.jar.sig \
+            --output-certificate aplicacao-java.jar.pem
+
+      - name: Criar GitHub Release e fazer Upload
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            aplicacao-java.jar
+            aplicacao-java.jar.sig
+            aplicacao-java.jar.pem
+          generate_release_notes: true
