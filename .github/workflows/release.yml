@@ -51,4 +51,5 @@ jobs:
             aplicacao-java.jar
             aplicacao-java.jar.sig
             aplicacao-java.jar.pem
+
           generate_release_notes: true
