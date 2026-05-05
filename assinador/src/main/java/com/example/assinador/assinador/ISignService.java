@@ -4,5 +4,5 @@ import com.example.assinador.API.AssinadorRequest;
 import com.example.assinador.API.AssinadorResponse;
 
 public interface ISignService {
-    AssinadorResponse sign(AssinadorRequest request);
-} 
+    AssinadorResponse assinar(AssinadorRequest request);
+}

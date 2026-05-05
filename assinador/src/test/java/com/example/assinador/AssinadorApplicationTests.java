@@ -11,3 +11,5 @@ class AssinadorApplicationTests {
 	}
 
 }
+
+//.\mvnw.cmd spring-boot:run

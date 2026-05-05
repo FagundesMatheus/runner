@@ -26,17 +26,14 @@ public class AssinadorController {
     }
 
     @PostMapping("/sign")
-    public ResponseEntity<AssinadorResponse> sign(@RequestBody AssinadorRequest request) {
-        AssinadorResponse response = signService.sign(request);
-        
+    public ResponseEntity<AssinadorResponse> assinar(@RequestBody AssinadorRequest request) {
+        AssinadorResponse response = signService.assinar(request);
         return ResponseEntity.ok(response);
     }
 
    @PostMapping("/validate")
-    public ResponseEntity<ValidateResponse> validate(@RequestBody ValidateRequest request) {
-        
-        ValidateResponse response = validateService.validate(request);
-        
+    public ResponseEntity<ValidateResponse> validar(@RequestBody ValidateRequest request) {
+        ValidateResponse response = validateService.validar(request);
         return ResponseEntity.ok(response);
     }
 }
