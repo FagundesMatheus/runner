@@ -1,8 +1,12 @@
 package com.example.assinador.API;
 
 public record ValidateRequest(
-        String content,
-        String signature,
-        String politicaAssinatura
+        String caminhoArquivoJson
 ) {
+    // Objeto que mapeia o conteúdo de dentro do arquivo JSON
+    public record DadosValidacao(
+            String conteudo,
+            String assinatura,
+            String politicaAssinaturaUrl
+    ) {}
 }
