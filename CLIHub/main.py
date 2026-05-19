@@ -12,9 +12,9 @@ def root(ctx: typer.Context) -> None:
 	if ctx.invoked_subcommand is not None:
 		return
 
-	ok = run_steps(java_steps(), verbose=False)
+	ok = run_steps(java_steps(), verbose=True)
 	if ok:
-		ok = run_steps(hub_steps(), verbose=False)
+		ok = run_steps(hub_steps(), verbose=True)
 
 	if not ok:
 		raise typer.Exit(code=1)
