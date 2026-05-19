@@ -28,23 +28,12 @@ public class AssinadorController {
     @PostMapping("/sign")
     public ResponseEntity<AssinadorResponse> assinar(@RequestBody AssinadorRequest request) {
         AssinadorResponse response = signService.assinar(request);
-        
-        if (!response.valid()) {
-            return ResponseEntity.badRequest().body(response); 
-        }
-        
-        return ResponseEntity.ok(response); 
+        return ResponseEntity.status(response.statusCode()).body(response);
     }
 
-   @PostMapping("/validate")
+    @PostMapping("/validate")
     public ResponseEntity<ValidateResponse> validar(@RequestBody ValidateRequest request) {
         ValidateResponse response = validateService.validar(request);
-        
-        // Verifica se a assinatura ou documento são inválidos
-        if (!response.valid()) {
-            return ResponseEntity.badRequest().body(response); 
-        }
-        
-        return ResponseEntity.ok(response); 
+        return ResponseEntity.status(response.statusCode()).body(response);
     }
 }
