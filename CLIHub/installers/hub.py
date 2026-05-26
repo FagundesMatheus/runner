@@ -95,7 +95,7 @@ def _load_release_json() -> Optional[dict]:
 
 
 def _hub_url_from_release(data: dict) -> Optional[str]:
-    jar = data.get("jar", {})
+    jar = data.get("jarHUB", {})
     return jar.get("url")
 
 
