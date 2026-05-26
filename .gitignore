@@ -1,3 +1,7 @@
 .idea/
 .vscode/
 *.iml
+.idea
+/CLIHub/__pycache__
+/CLIHub/__pycache__
+/CLIHub/installers/__pycache__
