@@ -1,27 +1,97 @@
-import typer
+from __future__ import annotations
 
-from core import run_steps
-from installers.hub import hub_steps
-from installers.java import java_steps
+import shlex
 
-app = typer.Typer(add_completion=False, no_args_is_help=False)
+from simulador import start_simulator, status_simulator, stop_simulator
 
-
-@app.callback(invoke_without_command=True)
-def root(ctx: typer.Context) -> None:
-	if ctx.invoked_subcommand is not None:
-		return
-
-	ok = run_steps(java_steps(), verbose=True)
-	if ok:
-		ok = run_steps(hub_steps(), verbose=True)
-
-	if not ok:
-		raise typer.Exit(code=1)
+PROMPT = "runner> "
+SESSION_STARTED_SIMULATOR = False
 
 
 def main() -> None:
-	app()
+	global SESSION_STARTED_SIMULATOR
+	try:
+		run_repl()
+	finally:
+		if SESSION_STARTED_SIMULATOR:
+			stop_simulator()
+			SESSION_STARTED_SIMULATOR = False
+
+
+def run_repl() -> None:
+	print("CLI HubSaude - Digite 'help' para comandos, 'exit' para sair.")
+	while True:
+		try:
+			line = input(PROMPT).strip()
+		except (EOFError, KeyboardInterrupt):
+			print()
+			break
+
+		if not line:
+			continue
+
+		try:
+			parts = shlex.split(line)
+		except ValueError:
+			print("Entrada invalida. Verifique as aspas.")
+			continue
+
+		command = parts[0].lower()
+		args = parts[1:]
+
+		if command in {"exit", "quit"}:
+			stop_simulator()
+			break
+
+		if command in {"help", "?"}:
+			_print_help()
+			continue
+
+		if command == "simulador":
+			_handle_simulador(args)
+			continue
+
+		print("Comando desconhecido. Digite 'help'.")
+
+
+def _print_help() -> None:
+	print("Comandos disponiveis:")
+	print("  simulador start   Inicia o simulador.")
+	print("  simulador stop    Encerra o simulador.")
+	print("  simulador status  Exibe o status do simulador.")
+	print("  help              Mostra esta ajuda.")
+	print("  exit              Encerra o CLI.")
+
+
+def _handle_simulador(args: list[str]) -> None:
+	if not args:
+		print("Uso: simulador start|stop|status")
+		return
+
+	action = args[0].lower()
+	if len(args) > 1:
+		print("Comando nao aceita argumentos adicionais.")
+		return
+
+	if action == "start":
+		started = start_simulator()
+		if started:
+			global SESSION_STARTED_SIMULATOR
+			SESSION_STARTED_SIMULATOR = True
+		return
+
+	if action == "stop":
+		stopped = stop_simulator()
+		if stopped:
+			global SESSION_STARTED_SIMULATOR
+			SESSION_STARTED_SIMULATOR = False
+		return
+
+	if action == "status":
+		status_simulator()
+		return
+
+	print("Subcomando invalido. Use start, stop ou status.")
 
 
 if __name__ == "__main__":
