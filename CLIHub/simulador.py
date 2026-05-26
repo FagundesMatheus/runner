@@ -54,12 +54,18 @@ def start_simulator() -> bool:
         print("Nao foi possivel localizar o Java ou o simulador.")
         return False
 
-    _launch_simulator(java_exe, hub_path)
+    try:
+        process = _launch_simulator(java_exe, hub_path)
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f"Falha ao iniciar o simulador: {exc}")
+        return False
+
     if _wait_for_info():
         print("Simulador iniciado.")
         return True
 
-    print("Simulador iniciado, mas ainda nao respondeu em /api/info.")
+    _terminate_process(process)
+    print("Simulador iniciado, mas ainda nao respondeu em /api/info. Processo encerrado.")
     return False
 
 
@@ -98,16 +104,31 @@ def status_simulator() -> bool:
     return False
 
 
-def _launch_simulator(java_exe: Path, hub_path: Path) -> None:
+def _launch_simulator(java_exe: Path, hub_path: Path) -> subprocess.Popen[bytes]:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     log_path = LOG_DIR / "simulador.log"
     with open(log_path, "a", encoding="utf-8") as handle:
-        subprocess.Popen(
+        return subprocess.Popen(
             [str(java_exe), "-jar", str(hub_path)],
             stdin=subprocess.DEVNULL,
             stdout=handle,
             stderr=handle,
         )
+
+
+def _terminate_process(process: subprocess.Popen[bytes]) -> None:
+    if process.poll() is not None:
+        return
+
+    try:
+        process.terminate()
+        process.wait(timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        try:
+            process.kill()
+            process.wait(timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
 
 
 def _request(method: str, path: str) -> Optional[Tuple[int, str]]:

@@ -47,6 +47,7 @@ def fetch_hub() -> bool:
     release_version = _hub_version_from_release(release_data)
     download_path = _download_path(url)
     if release_version and _load_hub_version() == release_version and download_path.exists():
+        _save_hub_version(release_version)
         return True
 
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -54,6 +55,9 @@ def fetch_hub() -> bool:
         urllib.request.urlretrieve(url, download_path)
     except OSError:
         return False
+
+    if release_version:
+        _save_hub_version(release_version)
 
     return True
 
@@ -73,7 +77,7 @@ def deploy_hub() -> None:
     hub_path = HUB_DIR / source_path.name
     shutil.copy2(source_path, hub_path)
     _save_hub_path(hub_path)
-    release_version = _latest_hub_version()
+    release_version = _load_hub_version()
     if release_version:
         _save_hub_version(release_version)
 
