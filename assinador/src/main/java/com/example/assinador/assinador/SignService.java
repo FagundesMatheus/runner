@@ -58,12 +58,22 @@ public class SignService implements ISignService {
 
                 String comandoPin = "0020000004" + converterParaHex(cripto.pin());
                 String respPin = smartcardSimulator.enviarComando(comandoPin);
-                // Erro de senha = 401 Unauthorized
-                if (!respPin.endsWith("9000")) return new AssinadorResponse(null, false, "Erro APDU: PIN incorreto. O Smartcard recusou a operação.", 401);
+                
+                if (respPin.equals("6983")) {
+                    return new AssinadorResponse(null, false, "Erro APDU (6983): Cartão bloqueado. Limite de tentativas de PIN excedido.", 401);
+                } else if (!respPin.endsWith("9000")) {
+                    return new AssinadorResponse(null, false, "Erro APDU: PIN incorreto. O Smartcard recusou a operação.", 401);
+                }
 
                 String respSign = smartcardSimulator.enviarComando("002A9E9A00");
-                // Erro de hardware = 500 Internal Server Error
-                if (!respSign.endsWith("9000")) return new AssinadorResponse(null, false, "Erro APDU: Falha ao gerar a assinatura no hardware.", 500);
+                
+                if (respSign.equals("6983")) {
+                    return new AssinadorResponse(null, false, "Erro APDU (6983): Cartão bloqueado. Não é possível assinar.", 401);
+                } else if (respSign.equals("6982")) {
+                    return new AssinadorResponse(null, false, "Erro APDU (6982): Status de segurança não satisfeito. Faça a verificação do PIN primeiro.", 401);
+                } else if (!respSign.endsWith("9000")) {
+                    return new AssinadorResponse(null, false, "Erro APDU: Falha ao gerar a assinatura no hardware.", 500);
+                }
                 
                 System.out.println("Assinatura via Smartcard Concluída\n");
                 mensagemSucesso += " (Operação validada via comunicação APDU).";
