@@ -1,6 +1,13 @@
 package com.example.assinador.assinador;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import java.io.IOException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
+import java.security.Security;
+import java.security.cert.CertificateException;
+
 import org.springframework.stereotype.Service;
 
 import com.example.assinador.API.AssinadorRequest;
@@ -11,16 +18,11 @@ public class SignService implements ISignService {
 
     private static final String FAKE_SIGNATURE = "MOCKED_SIGNATURE_BASE64_==";
 
-    @Autowired
-    private SmartcardApduSimulator smartcardSimulator;
-
     @Override
     public AssinadorResponse assinar(AssinadorRequest dados) {
         if (dados == null) {
             return new AssinadorResponse(null, false, "Erro: Corpo da requisição vazio.", 400);
         }
-
-        // Faltam campos obrigatórios = 422 Unprocessable Entity
         if (estaEmBranco(dados.bundleEndereco())) return new AssinadorResponse(null, false, "Erro: 'bundleEndereco' ausente no JSON.", 422);
         if (estaEmBranco(dados.provenanceTargetEndereco())) return new AssinadorResponse(null, false, "Erro: 'provenanceTargetEndereco' ausente.", 422);
         if (dados.dadosCriptograficos() == null) return new AssinadorResponse(null, false, "Erro: Objeto 'dadosCriptograficos' não fornecido.", 422);
@@ -35,73 +37,73 @@ public class SignService implements ISignService {
             case "PEM" -> {
                 if (estaEmBranco(cripto.chavePrivada())) return new AssinadorResponse(null, false, "Erro (PEM): 'chavePrivada' é obrigatória.", 422);
                 mensagemSucesso += " (Acesso via PEM).";
+                return new AssinadorResponse(FAKE_SIGNATURE, true, mensagemSucesso, 200);
             }
             case "PKCS#12" -> {
                 if (estaEmBranco(cripto.conteudo())) return new AssinadorResponse(null, false, "Erro (PKCS#12): 'conteudo' em base64 é obrigatório.", 422);
                 if (estaEmBranco(cripto.senha())) return new AssinadorResponse(null, false, "Erro (PKCS#12): 'senha' é obrigatória.", 422);
                 if (estaEmBranco(cripto.alias())) return new AssinadorResponse(null, false, "Erro (PKCS#12): 'alias' é obrigatório.", 422);
                 mensagemSucesso += " (Acesso via PKCS#12).";
+                return new AssinadorResponse(FAKE_SIGNATURE, true, mensagemSucesso, 200);
             }
-            case "TOKEN" -> {
-                if (estaEmBranco(cripto.pin())) return new AssinadorResponse(null, false, "Erro (TOKEN): 'pin' é obrigatório.", 422);
-                if (estaEmBranco(cripto.identificador())) return new AssinadorResponse(null, false, "Erro (TOKEN): 'identificador' é obrigatório.", 422);
-                mensagemSucesso += " (Operação PKCS#11 validada via Token Local).";
-            }
-            case "SMARTCARD" -> {
-                if (estaEmBranco(cripto.pin())) return new AssinadorResponse(null, false, "Erro (SMARTCARD): 'pin' é obrigatório.", 422);
-                if (estaEmBranco(cripto.identificador())) return new AssinadorResponse(null, false, "Erro (SMARTCARD): 'identificador' é obrigatório.", 422);
+            case "TOKEN", "SMARTCARD" -> {
+                if (estaEmBranco(cripto.pin())) return new AssinadorResponse(null, false, "Erro: 'pin' é obrigatório para esta operação.", 422);
+                if (estaEmBranco(cripto.identificador())) return new AssinadorResponse(null, false, "Erro: 'identificador' é obrigatório.", 422);
                 
-                System.out.println("\nIniciando conexão com a Leitora de Smartcard");
+                System.out.println("\n[PKCS#11] Iniciando conexão com o dispositivo criptográfico via SunPKCS11...");
                 
-                String respSelect = smartcardSimulator.enviarComando("00A4040000");
-                if (!respSelect.endsWith("9000")) return new AssinadorResponse(null, false, "Erro APDU: Falha ao selecionar o chip do Smartcard.", 500);
+                try {
+                    Provider provedorSunPKCS11 = Security.getProvider("SunPKCS11-SoftHSM2"); 
+                    
+                    if (provedorSunPKCS11 == null) {
+                        Provider provedorBase = Security.getProvider("SunPKCS11");
+                        if (provedorBase == null) {
+                            return new AssinadorResponse(null, false, "Erro: Provedor SunPKCS11 não suportado.", 500);
+                        }
+                        provedorSunPKCS11 = provedorBase.configure("softhsm2.cfg");
+                        Security.addProvider(provedorSunPKCS11);
+                    }
 
-                String comandoPin = "0020000004" + converterParaHex(cripto.pin());
-                String respPin = smartcardSimulator.enviarComando(comandoPin);
-                
-                if (respPin.equals("6983")) {
-                    return new AssinadorResponse(null, false, "Erro APDU (6983): Cartão bloqueado. Limite de tentativas de PIN excedido.", 401);
-                } else if (!respPin.endsWith("9000")) {
-                    return new AssinadorResponse(null, false, "Erro APDU: PIN incorreto. O Smartcard recusou a operação.", 401);
-                }
+                    KeyStore keyStore = KeyStore.getInstance("PKCS11", provedorSunPKCS11);
 
-                String respSign = smartcardSimulator.enviarComando("002A9E9A00");
-                
-                if (respSign.equals("6983")) {
-                    return new AssinadorResponse(null, false, "Erro APDU (6983): Cartão bloqueado. Não é possível assinar.", 401);
-                } else if (respSign.equals("6982")) {
-                    return new AssinadorResponse(null, false, "Erro APDU (6982): Status de segurança não satisfeito. Faça a verificação do PIN primeiro.", 401);
-                } else if (!respSign.endsWith("9000")) {
-                    return new AssinadorResponse(null, false, "Erro APDU: Falha ao gerar a assinatura no hardware.", 500);
+                    char[] pinPassword = cripto.pin().toCharArray();
+                    keyStore.load(null, pinPassword);
+
+                    System.out.println("[PKCS#11] Login efetuado com sucesso no dispositivo!");
+                    System.out.println("[PKCS#11] Autenticação validada via hardware. Retornando assinatura simulada.\n");
+                    
+                    mensagemSucesso += " (Autenticação real via PKCS#11).";
+                    return new AssinadorResponse(FAKE_SIGNATURE, true, mensagemSucesso, 200);
+
+                } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
+                    String mensagemErro = e.getMessage() != null ? e.getMessage() : "";
+                    System.err.println("[PKCS#11] Falha na operação de hardware: " + mensagemErro);
+
+                    if (mensagemErro.contains("CKR_PIN_INCORRECT")) {
+                        return new AssinadorResponse(null, false, "Erro APDU / PKCS#11: PIN incorreto. O dispositivo recusou a operação.", 401);
+                    } else if (mensagemErro.contains("CKR_PIN_LOCKED")) {
+                        return new AssinadorResponse(null, false, "Erro APDU / PKCS#11 (6983): Dispositivo bloqueado. Limite de tentativas físicas excedido.", 401);
+                    } else if (mensagemErro.contains("CKR_DEVICE_REMOVED") || mensagemErro.contains("init failed")) {
+                        return new AssinadorResponse(null, false, "Erro de infraestrutura: Falha ao carregar a DLL do SoftHSM2 ou dispositivo ausente.", 500);
+                    }
+
+                    return new AssinadorResponse(null, false, "Erro interno de criptografia: " + mensagemErro, 500);
                 }
-                
-                System.out.println("Assinatura via Smartcard Concluída\n");
-                mensagemSucesso += " (Operação validada via comunicação APDU).";
             }
             case "REMOTE" -> {
                 if (estaEmBranco(cripto.enderecoServico())) return new AssinadorResponse(null, false, "Erro (REMOTE): 'enderecoServico' é obrigatório.", 422);
                 if (estaEmBranco(cripto.credencial())) return new AssinadorResponse(null, false, "Erro (REMOTE): 'credencial' é obrigatória.", 422);
                 mensagemSucesso += " (Operação via serviço remoto).";
+                return new AssinadorResponse(FAKE_SIGNATURE, true, mensagemSucesso, 200);
             }
             default -> {
                 // Tipo inexistente = 400 Bad Request
                 return new AssinadorResponse(null, false, "Erro: Tipo de criptografia '" + dados.tipoCriptografia() + "' não suportado.", 400);
             }
         }
-
-        // Sucesso = 200 OK
-        return new AssinadorResponse(FAKE_SIGNATURE, true, mensagemSucesso, 200);
     }
 
     private boolean estaEmBranco(String valor) {
         return valor == null || valor.trim().isEmpty();
-    }
-
-    private String converterParaHex(String texto) {
-        StringBuilder hex = new StringBuilder();
-        for (char ch : texto.toCharArray()) {
-            hex.append(Integer.toHexString(ch));
-        }
-        return hex.toString().toUpperCase();
     }
 }
