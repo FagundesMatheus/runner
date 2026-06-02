@@ -193,7 +193,6 @@ Se você deseja contribuir com o projeto, siga estes passos:
 ### Módulo `CLIHub`
 
 - Contém utilitários Python para instalação e gerenciamento de dependências.
-- Não é o foco principal desta documentação, mas está disponível como suporte ao projeto.
 
 ### Observações gerais
 
