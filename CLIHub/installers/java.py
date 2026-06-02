@@ -105,6 +105,10 @@ def java_steps() -> InstallSteps:
     )
 
 
+def get_java_executable() -> Optional[Path]:
+    return _find_java_in_dir(JRE_DIR)
+
+
 def _load_release_json() -> Optional[dict]:
     request = urllib.request.Request(RELEASE_JSON_URL, headers={"User-Agent": USER_AGENT})
     try:
