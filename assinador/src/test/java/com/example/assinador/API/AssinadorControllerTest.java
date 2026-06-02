@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -16,6 +17,7 @@ import com.example.assinador.assinador.ISignService;
 import com.example.assinador.assinador.IValidateService;
 
 @WebMvcTest(AssinadorController.class)
+@ActiveProfiles("test")
 class AssinadorControllerTest {
 
     @Autowired
@@ -31,33 +33,65 @@ class AssinadorControllerTest {
 
     @Test
     void deveResponder200AoAssinarComSucesso() throws Exception {
-        when(signService.assinar(any())).thenReturn(new AssinadorResponse("ASSINATURA", true, "OK", 200));
+        when(signService.assinar(any())).thenReturn(new AssinadorResponse("ASSINATURA_BASE64", true, "OK", 200));
+
+        String jsonPayload = """
+                {
+                  "bundleEndereco": "http://bundle",
+                  "provenanceTargetEndereco": "http://target",
+                  "cadeiaCertificadosEndereco": "http://cadeia",
+                  "fonteTemporal": "http://time",
+                  "politicaAssinaturaUrl": "http://politica",
+                  "tipoCriptografia": "PEM",
+                  "dadosCriptograficos": {
+                    "chavePrivada": "CHAVE_MOCK"
+                  }
+                }
+                """;
 
         mockMvc.perform(post("/api/sign")
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content("{\"tipoCriptografia\": \"PEM\"}"))
+                .content(jsonPayload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.valid").value(true));
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.signature").value("ASSINATURA_BASE64"));
     }
 
     @Test
     void deveResponder422AoFaltarDadosNaAssinatura() throws Exception {
-        when(signService.assinar(any())).thenReturn(new AssinadorResponse(null, false, "Falta PIN", 422));
+        when(signService.assinar(any())).thenReturn(new AssinadorResponse(null, false, "Falta PIN ou Identificador", 422));
+
+        String jsonPayload = """
+                {
+                  "tipoCriptografia": "SMARTCARD"
+                }
+                """;
 
         mockMvc.perform(post("/api/sign")
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content("{\"tipoCriptografia\": \"SMARTCARD\"}"))
+                .content(jsonPayload))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.valid").value(false));
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.message").value("Falta PIN ou Identificador"));
     }
 
     @Test
     void deveResponder401QuandoHardwareRecusarPin() throws Exception {
         when(signService.assinar(any())).thenReturn(new AssinadorResponse(null, false, "PIN Errado", 401));
 
+        String jsonPayload = """
+                {
+                  "tipoCriptografia": "SMARTCARD",
+                  "dadosCriptograficos": {
+                    "pin": "9999",
+                    "identificador": "leitora-01"
+                  }
+                }
+                """;
+
         mockMvc.perform(post("/api/sign")
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content("{\"tipoCriptografia\": \"SMARTCARD\"}"))
+                .content(jsonPayload))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.valid").value(false));
     }
@@ -66,22 +100,38 @@ class AssinadorControllerTest {
 
     @Test
     void deveResponder200AoValidarComSucesso() throws Exception {
-        when(validateService.validar(any())).thenReturn(new ValidateResponse(true, "Integro", 200));
+        when(validateService.validar(any())).thenReturn(new ValidateResponse(true, "Documento Íntegro", 200));
+
+        String jsonPayload = """
+                {
+                  "conteudo": "DocBase64",
+                  "assinatura": "AssinaturaBase64",
+                  "politicaAssinaturaUrl": "http://politica"
+                }
+                """;
 
         mockMvc.perform(post("/api/validate")
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content("{\"assinatura\": \"OK\"}"))
+                .content(jsonPayload))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.valid").value(true));
     }
 
     @Test
     void deveResponder401AoValidarAssinaturaFalsa() throws Exception {
-        when(validateService.validar(any())).thenReturn(new ValidateResponse(false, "Adulterado", 401));
+        when(validateService.validar(any())).thenReturn(new ValidateResponse(false, "Assinatura Adulterada", 401));
+
+        String jsonPayload = """
+                {
+                  "conteudo": "DocBase64",
+                  "assinatura": "FALSA",
+                  "politicaAssinaturaUrl": "http://politica"
+                }
+                """;
 
         mockMvc.perform(post("/api/validate")
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content("{\"assinatura\": \"FALSA\"}"))
+                .content(jsonPayload))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.valid").value(false));
     }
