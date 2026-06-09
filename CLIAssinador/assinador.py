@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shlex
 import socket
 import ssl
 import json
@@ -18,7 +19,8 @@ APP_DIR = Path.home() / ".assinador"
 LOG_DIR = APP_DIR / "logs"
 
 ASSINADOR_HOST = "127.0.0.1"
-ASSINADOR_PORT_SERVIDOR = 9042
+ASSINADOR_PORT_SERVIDOR = 9742
+JAVA_QUIET_OPTS = ("-Dspring.main.banner-mode=off", "-Dlogging.level.root=ERROR")
 STATUS_PATH: str | None = None  # A definir: ex. /api/info
 SHUTDOWN_PATH: str | None = None  # A definir: ex. /shutdown
 SIGN_PATH = "/api/sign"
@@ -176,7 +178,11 @@ def sign_assinador(arquivo: str) -> bool:
         return False
 
     if _current_mode == "local":
-        return _run_java_local("--sign", str(arquivo_path.resolve()))
+        output = _run_java_local("-assinar", str(arquivo_path.resolve()))
+        if output is None:
+            print("Assinador nao retornou resposta.")
+            return False
+        return _handle_assinador_result(output, "Assinatura")
 
     if _current_port is None or not _is_assinador_on_port(_current_port):
         print("Assinador nao esta em execucao.")
@@ -194,17 +200,11 @@ def sign_assinador(arquivo: str) -> bool:
         print("Assinador nao esta em execucao.")
         return False
 
-    status, body = response
-    if 200 <= status < 300:
-        print("Arquivo assinado com sucesso.")
-        if body:
-            print(body)
-        return True
-
-    print(f"Falha ao assinar arquivo (HTTP {status}).")
-    if body:
-        print(body)
-    return False
+    _, body = response
+    if not body:
+        print("Assinador nao retornou resposta.")
+        return False
+    return _handle_assinador_result(body, "Assinatura")
 
 
 def validate_assinador(arquivo: str) -> bool:
@@ -217,7 +217,11 @@ def validate_assinador(arquivo: str) -> bool:
         return False
 
     if _current_mode == "local":
-        return _run_java_local("--validate", str(arquivo_path.resolve()))
+        output = _run_java_local("-validar", str(arquivo_path.resolve()))
+        if output is None:
+            print("Assinador nao retornou resposta.")
+            return False
+        return _handle_assinador_result(output, "Validacao")
 
     if _current_port is None or not _is_assinador_on_port(_current_port):
         print("Assinador nao esta em execucao.")
@@ -235,17 +239,11 @@ def validate_assinador(arquivo: str) -> bool:
         print("Assinador nao esta em execucao.")
         return False
 
-    status, body = response
-    if 200 <= status < 300 and _is_valid_response(body):
-        print("Arquivo validado com sucesso.")
-        if body:
-            print(body)
-        return True
-
-    print(f"Falha ao validar arquivo (HTTP {status}).")
-    if body:
-        print(body)
-    return False
+    _, body = response
+    if not body:
+        print("Assinador nao retornou resposta.")
+        return False
+    return _handle_assinador_result(body, "Validacao")
 
 
 def _prepare_assinador() -> bool:
@@ -278,22 +276,106 @@ def _validate_json_file(arquivo: str) -> Path | None:
     return arquivo_path
 
 
-def _run_java_local(*args: str) -> bool:
+def _log_java_command(cmd: list[str]) -> None:
+    line = "Executando: " + " ".join(shlex.quote(part) for part in cmd)
+    print(line)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    with open(LOG_DIR / "assinador.log", "a", encoding="utf-8") as handle:
+        handle.write(f"{timestamp} {line}\n")
+
+
+def _run_java_local(action: str, arquivo: str) -> str | None:
     if not _prepare_assinador():
-        return False
+        return None
 
     java_exe = get_java_executable()
     assinador_path = get_assinador_path()
     assert java_exe is not None and assinador_path is not None
 
-    cmd = [str(java_exe), "-jar", str(assinador_path), "--mode", "local", *args]
+    cmd = [
+        str(java_exe),
+        *JAVA_QUIET_OPTS,
+        "-jar",
+        str(assinador_path),
+        "-local",
+        action,
+        arquivo,
+    ]
+    _log_java_command(cmd)
     try:
-        result = subprocess.run(cmd, check=False)
+        result = subprocess.run(
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
     except OSError as exc:
         print(f"Falha ao executar o assinador: {exc}")
+        return None
+
+    output = (result.stdout or "").strip()
+    if output:
+        return output
+
+    stderr = (result.stderr or "").strip()
+    if stderr:
+        print(stderr)
+    elif result.returncode != 0:
+        print(f"Comando encerrou com codigo {result.returncode}.")
+    return None
+
+
+def _parse_response_json(text: str) -> dict | None:
+    text = text.strip()
+    if not text:
+        return None
+
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        payload = None
+    else:
+        if isinstance(payload, dict):
+            return payload
+
+    for line in reversed(text.splitlines()):
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+
+    return None
+
+
+def _handle_assinador_result(body: str, operacao: str) -> bool:
+    payload = _parse_response_json(body)
+    if payload is None:
+        print("Resposta invalida do assinador.")
+        if body.strip():
+            print(body.strip())
         return False
 
-    return result.returncode == 0
+    valid = payload.get("valid")
+    message = payload.get("message")
+
+    if valid is True:
+        print(body.strip())
+        print(f"{operacao} realizada com sucesso.")
+        return True
+
+    if isinstance(message, str) and message.strip():
+        print(message.strip())
+    else:
+        print(f"Falha na {operacao.lower()}.")
+    return False
 
 
 def _launch_servidor(
@@ -301,15 +383,11 @@ def _launch_servidor(
 ) -> subprocess.Popen[bytes]:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     log_path = LOG_DIR / "assinador.log"
-    cmd = [
-        str(java_exe),
-        "-jar",
-        str(assinador_path),
-        "--mode",
-        "servidor",
-        "--port",
-        str(port),
-    ]
+    cmd = [str(java_exe)]
+    if port != ASSINADOR_PORT_SERVIDOR:
+        cmd.append(f"-Dserver.port={port}")
+    cmd.extend(["-jar", str(assinador_path), "-API"])
+    _log_java_command(cmd)
 
     with open(log_path, "a", encoding="utf-8") as handle:
         return subprocess.Popen(
@@ -436,16 +514,3 @@ def _is_assinador_response(body: str) -> bool:
     )
 
 
-def _is_valid_response(body: str) -> bool:
-    if not body.strip():
-        return False
-
-    try:
-        payload = json.loads(body)
-    except json.JSONDecodeError:
-        return False
-
-    if not isinstance(payload, dict):
-        return False
-
-    return payload.get("valid") is True

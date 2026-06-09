@@ -13,7 +13,7 @@ from assinador import (
 PROMPT = "runner> "
 SESSION_STARTED = False
 DEFAULT_MODE = "servidor"
-DEFAULT_PORT = 9042
+DEFAULT_PORT = 9742
 
 
 def main() -> None:
