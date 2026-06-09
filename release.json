@@ -4,8 +4,8 @@
     "version": "1.2.0"
   },
   "jarAssinador": {
-    "url": "https://github.com/FagundesMatheus/runner/releases/download/assinador-v0.1.1/aplicacao-java.jar",
-    "version": "0.1.1"
+    "url": "https://github.com/FagundesMatheus/runner/releases/download/assinador-v0.2.1/aplicacao-java.jar",
+    "version": "0.2.1"
   },
   "jdk": {
     "windows_x64": "https://api.adoptium.net/v3/binary/latest/25/ga/windows/x64/jdk/hotspot/normal/eclipse",
