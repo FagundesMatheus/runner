@@ -3,6 +3,10 @@
     "url": "https://github.com/kyriosdata/runner/releases/download/v0.0.2/hubsaude-simulador-0.0.0-SNAPSHOT.jar",
     "version": "1.2.0"
   },
+  "jarAssinador": {
+    "url": "https://github.com/FagundesMatheus/runner/releases/download/assinador-v0.1.1/aplicacao-java.jar",
+    "version": "0.1.1"
+  },
   "jdk": {
     "windows_x64": "https://api.adoptium.net/v3/binary/latest/25/ga/windows/x64/jdk/hotspot/normal/eclipse",
     "linux_x64":   "https://api.adoptium.net/v3/binary/latest/25/ga/linux/x64/jdk/hotspot/normal/eclipse",
