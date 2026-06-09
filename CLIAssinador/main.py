@@ -68,8 +68,8 @@ def _print_help() -> None:
     print("  assinador status                          Exibe o status do assinador.")
     print("  assinador sign <arquivo.json>             Assina um arquivo JSON.")
     print("  assinador validate <arquivo.json>         Valida um arquivo JSON.")
-    print("  help              Mostra esta ajuda.")
-    print("  exit              Encerra o CLI.")
+    print("  help                                      Mostra esta ajuda.")
+    print("  exit                                      Encerra o CLI.")
 
 
 def _handle_assinador(args: list[str]) -> None:

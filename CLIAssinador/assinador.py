@@ -302,7 +302,7 @@ def _run_java_local(action: str, arquivo: str) -> str | None:
         action,
         arquivo,
     ]
-    _log_java_command(cmd)
+    #_log_java_command(cmd)
     try:
         result = subprocess.run(
             cmd,
@@ -367,7 +367,6 @@ def _handle_assinador_result(body: str, operacao: str) -> bool:
     message = payload.get("message")
 
     if valid is True:
-        print(body.strip())
         print(f"{operacao} realizada com sucesso.")
         return True
 
@@ -387,7 +386,7 @@ def _launch_servidor(
     if port != ASSINADOR_PORT_SERVIDOR:
         cmd.append(f"-Dserver.port={port}")
     cmd.extend(["-jar", str(assinador_path), "-API"])
-    _log_java_command(cmd)
+    #_log_java_command(cmd)
 
     with open(log_path, "a", encoding="utf-8") as handle:
         return subprocess.Popen(

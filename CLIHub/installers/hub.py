@@ -15,8 +15,8 @@ DOWNLOAD_DIR = APP_DIR / "downloads"
 HUB_STATE_FILE = APP_DIR / "hub_path.txt"
 HUB_VERSION_FILE = APP_DIR / "hub_version.txt"
 
-RELEASE_JSON_URL = "https://raw.githubusercontent.com/FagundesMatheus/runner/main/release.json"
-USER_AGENT = "CLIHub/1.0"
+RELEASE_JSON_URL = "https://raw.githubusercontent.com/kyriosdata/runner/main/release.json"
+USER_AGENT = "Simulador"
 
 
 def check_hub() -> bool:
@@ -121,12 +121,12 @@ def _load_release_json() -> Optional[dict]:
 
 
 def _hub_url_from_release(data: dict) -> Optional[str]:
-    jar = data.get("jarHUB", {})
+    jar = data.get("simulador", {})
     return jar.get("url")
 
 
 def _hub_version_from_release(data: dict) -> Optional[str]:
-    jar = data.get("jarHUB", {})
+    jar = data.get("simulador", {})
     version = jar.get("version")
     return version.strip() if isinstance(version, str) and version.strip() else None
 
