@@ -45,15 +45,7 @@ jobs:
       - name: Compilar executável com PyInstaller
         shell: bash
         run: |
-          ROOT_DIR=$(pwd)
-          ARQUIVO_MAIN=$(find . -maxdepth 2 -type f -name "main.py" | head -n 1)
-          echo "Arquivo entrypoint encontrado em: $ARQUIVO_MAIN"
-          DIR_MAIN=$(dirname "$ARQUIVO_MAIN")
-          echo "Entrando no diretório do projeto: $DIR_MAIN"
-          cd "$DIR_MAIN"
-          pyinstaller --noconfirm --onefile --distpath "$ROOT_DIR/dist" --name ${{ matrix.exec_name }} main.py
-          cd CLIAssinador
-          pyinstaller --noconfirm --onefile --distpath "$ROOT_DIR/dist" --name ${{ matrix.exec_name }} --paths . main.py
+          pyinstaller --noconfirm --onefile --name ${{ matrix.exec_name }} --paths CLIAssinador CLIAssinador/main.py
 
       - name: Instalar o Cosign
         uses: sigstore/cosign-installer@v3.5.0
