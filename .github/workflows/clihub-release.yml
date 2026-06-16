@@ -3,8 +3,7 @@ name: CLI Assinador release
 on:
   push:
     tags:
-      - 'cliassinador-v*'
-      - 'CLI-Assinador-v*'
+      - 'CLI-Hub-v*'
 
 permissions:
   contents: write
@@ -20,11 +19,11 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: ubuntu-latest
-            exec_name: cliassinador-linux
+            exec_name: clihub-linux
           - os: windows-latest
-            exec_name: cliassinador-windows.exe
+            exec_name: clihub-windows.exe
           - os: macos-latest
-            exec_name: cliassinador-macos
+            exec_name: clihub-macos
 
     steps:
       - name: Checkout do código
@@ -43,7 +42,7 @@ jobs:
       - name: Compilar executável com PyInstaller
         shell: bash
         run: |
-          pyinstaller --noconfirm --onefile --name ${{ matrix.exec_name }} --paths CLIAssinador CLIAssinador/main.py
+          pyinstaller --noconfirm --onefile --name ${{ matrix.exec_name }} --paths CLIHub CLIHub/main.py
 
       - name: Instalar o Cosign
         uses: sigstore/cosign-installer@v3.5.0
@@ -83,4 +82,4 @@ jobs:
         with:
           name: ${{ github.ref_name }}
           files: artefatos/*
-          generate_release_notes: true     
+          generate_release_notes: true
