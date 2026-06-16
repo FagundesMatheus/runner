@@ -14,6 +14,7 @@ jobs:
     name: Build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         include:
@@ -40,9 +41,15 @@ jobs:
           # Se houver um arquivo requirements.txt no futuro, use a linha abaixo:
           # pip install -r CLIAssinador/requirements.txt
 
+      - name: Verificar nome das pastas (Debug)
+        run: ls -la
+
       - name: Compilar executável com PyInstaller
+        shell: bash
         run: |
-          pyinstaller --noconfirm --onefile --name ${{ matrix.exec_name }} CLIAssinador/main.py
+          ARQUIVO_MAIN=$(find . -maxdepth 2 -type f -name "main.py" | head -n 1)
+          echo "Arquivo entrypoint encontrado em: $ARQUIVO_MAIN"
+          pyinstaller --noconfirm --onefile --name ${{ matrix.exec_name }} "$ARQUIVO_MAIN"
 
       - name: Instalar o Cosign
         uses: sigstore/cosign-installer@v3.5.0
