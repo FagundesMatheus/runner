@@ -1,0 +1,65 @@
+name: CLI Assinador release
+
+on:
+  push:
+    tags:
+      - 'cliassinador-v*'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build-and-release:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            exec_name: cliassinador-linux
+          - os: windows-latest
+            exec_name: cliassinador-windows.exe
+          - os: macos-latest
+            exec_name: cliassinador-macos
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências e PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller typer
+          # Se houver um arquivo requirements.txt no futuro, use a linha abaixo:
+          # pip install -r CLIAssinador/requirements.txt
+
+      - name: Compilar executável com PyInstaller
+        run: |
+          pyinstaller --noconfirm --onefile --name ${{ matrix.exec_name }} CLIAssinador/main.py
+
+      - name: Instalar o Cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Assinar o artefato com Cosign (Keyless/OIDC)
+        shell: bash
+        run: |
+          cosign sign-blob dist/${{ matrix.exec_name }} \
+            --yes \
+            --output-signature dist/${{ matrix.exec_name }}.sig \
+            --output-certificate dist/${{ matrix.exec_name }}.pem
+
+      - name: Criar GitHub Release e fazer Upload
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/${{ matrix.exec_name }}
+            dist/${{ matrix.exec_name }}.sig
+            dist/${{ matrix.exec_name }}.pem
+          generate_release_notes: true
