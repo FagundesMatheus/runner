@@ -41,9 +41,6 @@ jobs:
           # Se houver um arquivo requirements.txt no futuro, use a linha abaixo:
           # pip install -r CLIAssinador/requirements.txt
 
-      - name: Verificar nome das pastas (Debug)
-        run: ls -la
-
       - name: Compilar executável com PyInstaller
         shell: bash
         run: |
