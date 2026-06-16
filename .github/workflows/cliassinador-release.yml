@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'cliassinador-v*'
+      - 'CLI-Assinador-v*'
 
 permissions:
   contents: write
@@ -44,9 +45,13 @@ jobs:
       - name: Compilar executável com PyInstaller
         shell: bash
         run: |
+          ROOT_DIR=$(pwd)
           ARQUIVO_MAIN=$(find . -maxdepth 2 -type f -name "main.py" | head -n 1)
           echo "Arquivo entrypoint encontrado em: $ARQUIVO_MAIN"
-          pyinstaller --noconfirm --onefile --name ${{ matrix.exec_name }} "$ARQUIVO_MAIN"
+          DIR_MAIN=$(dirname "$ARQUIVO_MAIN")
+          echo "Entrando no diretório do projeto: $DIR_MAIN"
+          cd "$DIR_MAIN"
+          pyinstaller --noconfirm --onefile --distpath "$ROOT_DIR/dist" --name ${{ matrix.exec_name }} main.py
 
       - name: Instalar o Cosign
         uses: sigstore/cosign-installer@v3.5.0
@@ -84,5 +89,6 @@ jobs:
       - name: Criar GitHub Release e fazer Upload
         uses: softprops/action-gh-release@v2
         with:
+          name: ${{ github.ref_name }}
           files: artefatos/*
           generate_release_notes: true   
