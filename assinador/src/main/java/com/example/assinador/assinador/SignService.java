@@ -23,6 +23,7 @@ public class SignService implements ISignService {
         if (dados == null) {
             return new AssinadorResponse(null, false, "Erro: Corpo da requisição vazio.", 400);
         }
+
         if (estaEmBranco(dados.bundleEndereco())) return new AssinadorResponse(null, false, "Erro: 'bundleEndereco' ausente no JSON.", 422);
         if (estaEmBranco(dados.provenanceTargetEndereco())) return new AssinadorResponse(null, false, "Erro: 'provenanceTargetEndereco' ausente.", 422);
         if (dados.dadosCriptograficos() == null) return new AssinadorResponse(null, false, "Erro: Objeto 'dadosCriptograficos' não fornecido.", 422);
@@ -43,39 +44,55 @@ public class SignService implements ISignService {
                 if (estaEmBranco(cripto.conteudo())) return new AssinadorResponse(null, false, "Erro (PKCS#12): 'conteudo' em base64 é obrigatório.", 422);
                 if (estaEmBranco(cripto.senha())) return new AssinadorResponse(null, false, "Erro (PKCS#12): 'senha' é obrigatória.", 422);
                 if (estaEmBranco(cripto.alias())) return new AssinadorResponse(null, false, "Erro (PKCS#12): 'alias' é obrigatório.", 422);
+                
                 mensagemSucesso += " (Acesso via PKCS#12).";
                 return new AssinadorResponse(FAKE_SIGNATURE, true, mensagemSucesso, 200);
             }
-            case "TOKEN", "SMARTCARD" -> {
+           case "TOKEN", "SMARTCARD" -> {
                 if (estaEmBranco(cripto.pin())) return new AssinadorResponse(null, false, "Erro: 'pin' é obrigatório para esta operação.", 422);
                 if (estaEmBranco(cripto.identificador())) return new AssinadorResponse(null, false, "Erro: 'identificador' é obrigatório.", 422);
                 
                 System.out.println("\n[PKCS#11] Iniciando conexão com o dispositivo criptográfico via SunPKCS11...");
                 
                 try {
-                    Provider provedorSunPKCS11 = Security.getProvider("SunPKCS11-SoftHSM2"); 
-                    
-                    if (provedorSunPKCS11 == null) {
-                        Provider provedorBase = Security.getProvider("SunPKCS11");
-                        if (provedorBase == null) {
-                            return new AssinadorResponse(null, false, "Erro: Provedor SunPKCS11 não suportado.", 500);
-                        }
-                        provedorSunPKCS11 = provedorBase.configure("softhsm2.cfg");
-                        Security.addProvider(provedorSunPKCS11);
+                    String os = System.getProperty("os.name").toLowerCase();
+                    String libraryPath;
+
+                    if (os.contains("win")) {
+                        libraryPath = "C:\\SoftHSM2\\lib\\softhsm2-x64.dll"; // Windows
+                    } else if (os.contains("mac")) {
+                        libraryPath = "/usr/local/lib/softhsm/libsofthsm2.so"; // MacOS
+                    } else {
+                        libraryPath = "/usr/lib/softhsm/libsofthsm2.so"; // Linux
                     }
 
-                    KeyStore keyStore = KeyStore.getInstance("PKCS11", provedorSunPKCS11);
+                    System.out.println("[PKCS#11] Sistema detectado: " + System.getProperty("os.name") + ". Usando driver: " + libraryPath);
 
+                    String configDinamica = """
+                            --name = SoftHSM2
+                            library = %s
+                            slotListIndex = 0
+                            """.formatted(libraryPath);
+
+                    Provider provedorBase = Security.getProvider("SunPKCS11");
+                    if (provedorBase == null) {
+                        return new AssinadorResponse(null, false, "Erro: Provedor SunPKCS11 não suportado pelo seu ambiente Java.", 500);
+                    }
+                    
+                    Provider provedorSunPKCS11 = provedorBase.configure(configDinamica);
+                    Security.addProvider(provedorSunPKCS11);
+
+                    KeyStore keyStore = KeyStore.getInstance("PKCS11", provedorSunPKCS11);
                     char[] pinPassword = cripto.pin().toCharArray();
                     keyStore.load(null, pinPassword);
 
                     System.out.println("[PKCS#11] Login efetuado com sucesso no dispositivo!");
                     System.out.println("[PKCS#11] Autenticação validada via hardware. Retornando assinatura simulada.\n");
                     
-                    mensagemSucesso += " (Autenticação real via PKCS#11).";
+                    mensagemSucesso += " (Autenticação real via PKCS#11 dinâmico).";
                     return new AssinadorResponse(FAKE_SIGNATURE, true, mensagemSucesso, 200);
 
-                } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
+                } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException | IllegalArgumentException e) {
                     String mensagemErro = e.getMessage() != null ? e.getMessage() : "";
                     System.err.println("[PKCS#11] Falha na operação de hardware: " + mensagemErro);
 
@@ -83,8 +100,8 @@ public class SignService implements ISignService {
                         return new AssinadorResponse(null, false, "Erro APDU / PKCS#11: PIN incorreto. O dispositivo recusou a operação.", 401);
                     } else if (mensagemErro.contains("CKR_PIN_LOCKED")) {
                         return new AssinadorResponse(null, false, "Erro APDU / PKCS#11 (6983): Dispositivo bloqueado. Limite de tentativas físicas excedido.", 401);
-                    } else if (mensagemErro.contains("CKR_DEVICE_REMOVED") || mensagemErro.contains("init failed")) {
-                        return new AssinadorResponse(null, false, "Erro de infraestrutura: Falha ao carregar a DLL do SoftHSM2 ou dispositivo ausente.", 500);
+                    } else if (mensagemErro.contains("CKR_DEVICE_REMOVED") || mensagemErro.contains("init failed") || mensagemErro.contains("not found")) {
+                        return new AssinadorResponse(null, false, "Erro de infraestrutura: Falha ao carregar a biblioteca do SoftHSM2. Verifique se ele está instalado no seu SO.", 500);
                     }
 
                     return new AssinadorResponse(null, false, "Erro interno de criptografia: " + mensagemErro, 500);
@@ -93,11 +110,11 @@ public class SignService implements ISignService {
             case "REMOTE" -> {
                 if (estaEmBranco(cripto.enderecoServico())) return new AssinadorResponse(null, false, "Erro (REMOTE): 'enderecoServico' é obrigatório.", 422);
                 if (estaEmBranco(cripto.credencial())) return new AssinadorResponse(null, false, "Erro (REMOTE): 'credencial' é obrigatória.", 422);
+                
                 mensagemSucesso += " (Operação via serviço remoto).";
                 return new AssinadorResponse(FAKE_SIGNATURE, true, mensagemSucesso, 200);
             }
             default -> {
-                // Tipo inexistente = 400 Bad Request
                 return new AssinadorResponse(null, false, "Erro: Tipo de criptografia '" + dados.tipoCriptografia() + "' não suportado.", 400);
             }
         }
