@@ -10,7 +10,7 @@ permissions:
   id-token: write
 
 jobs:
-  build-and-release:
+  build:
     name: Build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -55,11 +55,30 @@ jobs:
             --output-signature dist/${{ matrix.exec_name }}.sig \
             --output-certificate dist/${{ matrix.exec_name }}.pem
 
-      - name: Criar GitHub Release e fazer Upload
-        uses: softprops/action-gh-release@v2
+      - name: Upload dos artefatos temporários
+        uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: executavel-${{ matrix.os }}
+          path: |
             dist/${{ matrix.exec_name }}
             dist/${{ matrix.exec_name }}.sig
             dist/${{ matrix.exec_name }}.pem
-          generate_release_notes: true 
+          retention-days: 1
+
+  release:
+    name: Criar GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download dos artefatos
+        uses: actions/download-artifact@v4
+        with:
+          path: artefatos
+          pattern: executavel-*
+          merge-multiple: true
+
+      - name: Criar GitHub Release e fazer Upload
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artefatos/*
+          generate_release_notes: true
