@@ -48,3 +48,4 @@ jobs:
             aplicacao-java.jar.pem
 
           generate_release_notes: true
+ 
