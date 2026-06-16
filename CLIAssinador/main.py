@@ -2,13 +2,7 @@ from __future__ import annotations
 
 import shlex
 
-from assinador import (
-    sign_assinador,
-    start_assinador,
-    status_assinador,
-    stop_assinador,
-    validate_assinador,
-)
+from CLIAssinador.assinador import stop_assinador, start_assinador, status_assinador, sign_assinador, validate_assinador
 
 PROMPT = "runner> "
 SESSION_STARTED = False

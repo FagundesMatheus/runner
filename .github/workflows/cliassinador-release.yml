@@ -52,6 +52,8 @@ jobs:
           echo "Entrando no diretório do projeto: $DIR_MAIN"
           cd "$DIR_MAIN"
           pyinstaller --noconfirm --onefile --distpath "$ROOT_DIR/dist" --name ${{ matrix.exec_name }} main.py
+          cd CLIAssinador
+          pyinstaller --noconfirm --onefile --distpath "$ROOT_DIR/dist" --name ${{ matrix.exec_name }} --paths . main.py
 
       - name: Instalar o Cosign
         uses: sigstore/cosign-installer@v3.5.0
