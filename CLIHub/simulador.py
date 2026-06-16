@@ -41,9 +41,9 @@ def start_simulator() -> bool:
         print("Porta 8443 em uso. Encerrando.")
         return False
 
-    ok = run_steps(java_steps(), verbose=True)
+    ok = run_steps(java_steps())
     if ok:
-        ok = run_steps(hub_steps(), verbose=True)
+        ok = run_steps(hub_steps())
     if not ok:
         print("Falha ao preparar o Java ou o simulador.")
         return False
