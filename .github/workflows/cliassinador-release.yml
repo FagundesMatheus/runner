@@ -62,4 +62,4 @@ jobs:
             dist/${{ matrix.exec_name }}
             dist/${{ matrix.exec_name }}.sig
             dist/${{ matrix.exec_name }}.pem
-          generate_release_notes: true
+          generate_release_notes: true 
