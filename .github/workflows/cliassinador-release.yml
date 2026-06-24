@@ -1,0 +1,86 @@
+name: CLI Assinador release
+
+on:
+  push:
+    tags:
+      - 'cliassinador-v*'
+      - 'CLI-Assinador-v*'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            exec_name: cliassinador-linux
+          - os: windows-latest
+            exec_name: cliassinador-windows.exe
+          - os: macos-latest
+            exec_name: cliassinador-macos
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências e PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller typer
+
+      - name: Compilar executável com PyInstaller
+        shell: bash
+        run: |
+          pyinstaller --noconfirm --onefile --name ${{ matrix.exec_name }} --paths CLIAssinador CLIAssinador/main.py
+
+      - name: Instalar o Cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Assinar o artefato com Cosign (Keyless/OIDC)
+        shell: bash
+        run: |
+          cosign sign-blob dist/${{ matrix.exec_name }} \
+            --yes \
+            --output-signature dist/${{ matrix.exec_name }}.sig \
+            --output-certificate dist/${{ matrix.exec_name }}.pem
+
+      - name: Upload dos artefatos temporários
+        uses: actions/upload-artifact@v4
+        with:
+          name: executavel-${{ matrix.os }}
+          path: |
+            dist/${{ matrix.exec_name }}
+            dist/${{ matrix.exec_name }}.sig
+            dist/${{ matrix.exec_name }}.pem
+          retention-days: 1
+
+  release:
+    name: Criar GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download dos artefatos
+        uses: actions/download-artifact@v4
+        with:
+          path: artefatos
+          pattern: executavel-*
+          merge-multiple: true
+
+      - name: Criar GitHub Release e fazer Upload
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          files: artefatos/*
+          generate_release_notes: true     
